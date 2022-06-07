@@ -6,17 +6,27 @@ pub struct Response {
     pub status: Status,
     pub headers: HashMap<String, String>,
     pub body: String,
-    pub stream: TcpStream,
+    stream: TcpStream,
 }
 
 impl Response {
     pub fn new(stream: TcpStream) -> Self {
+        let mut headers = HashMap::new();
+        headers.insert(String::from("Content-Type"), String::from("text/html; charset=utf-8"));
         Self {
             status: Status::Ok,
-            headers: HashMap::new(),
+            headers,
             body: String::new(),
             stream,
         }
+    }
+
+    pub fn set_header(&mut self, key: String, value: String) {
+        self.headers.insert(key, value);
+    }
+
+    pub fn remove_header(&mut self, key: String) {
+        self.headers.remove(&key);
     }
 
     pub fn set_status(&mut self, status: Status) {
@@ -30,10 +40,11 @@ impl Response {
     pub fn send(&mut self) {
         let status_line = format!("HTTP/1.1 {}\r\n", self.status.as_str());
         let mut response = status_line.to_string();
+        self.set_header(String::from("Content-Length"), self.body.len().to_string());
         for (key, value) in &self.headers {
             response.push_str(&format!("{}: {}\r\n", key, value));
         }
-        response.push_str(&format!("Content-Length: {}\r\n\r\n", self.body.len()));
+        response.push_str("\r\n");
         response.push_str(&self.body);
         self.stream.write(response.as_bytes()).unwrap();
         self.stream.flush().unwrap();
