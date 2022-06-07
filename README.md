@@ -8,7 +8,7 @@ This program is still in development
 
 Feature to add:
 
-- [ ] [Parsing request header and send response header](https://github.com/quentinlegot/rest_server/issues/1)
+- [X] [Parsing request header and send response header](https://github.com/quentinlegot/rest_server/issues/1)
 - [ ] [Add more status code than 200 and 404](https://github.com/quentinlegot/rest_server/issues/2)
 - [ ] Don't support authentification natively (won't add support shortly as you can made it yourself when `parsing request header` will be done)
 - [ ] [Support other method than get and post](https://github.com/quentinlegot/rest_server/issues/3)
