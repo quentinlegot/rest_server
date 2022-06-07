@@ -23,7 +23,6 @@ fn main() {
     let mut app: Server = Server::new();
     app.set_number_of_worker(8);
     app.get(String::from("/"), Box::new(index));
-    app.get(String::from("/sleep"), Box::new(sleep));
     app.listen(7878);
     println!("Shutting down.")
 }
