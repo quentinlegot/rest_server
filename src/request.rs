@@ -24,7 +24,7 @@ impl Request {
         self.headers.get(key).map(|s| s.as_str())
     }
 
-    pub fn parse_header(body: &str) -> HashMap<String, String> {
+    fn parse_header(body: &str) -> HashMap<String, String> {
         let mut headers = HashMap::new();
         for line in body.split("\r\n") {
             let parts = line.split(": ").collect::<Vec<&str>>();

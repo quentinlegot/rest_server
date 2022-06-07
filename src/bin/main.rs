@@ -11,12 +11,13 @@ fn main() {
     app.get(String::from("/"), Box::new(index));
     app.get(String::from("/sleep"), Box::new(sleep));
     app.listen(7878);
-    println!("Shutting down.")
 }
 
-fn index(_request: Request, mut response: Response) {
+fn index(request: Request, mut response: Response) {
     let content = "Hello";
+    println!("{}", request.get_header("User-Agent").unwrap());
     response.set_status(Status::from(200));
+    response.set_header(String::from("Content-Type"), String::from("text/plain"));
     response.set_body(content);
     response.send();
 }
