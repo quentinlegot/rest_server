@@ -30,6 +30,7 @@ lazy_static! {
 
 fn not_found(_req: Request, mut res: Response) {
     res.set_status(Status::NotFound);
+    res.set_header(String::from("Content-Type"), String::from("text/plain; charset=utf-8"));
     res.set_body("404 Not Found");
     res.send();
 }
@@ -56,6 +57,34 @@ impl Server {
 
     pub fn post(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::POST, path, f);
+    }
+
+    pub fn put(&mut self, path: String, f: Box<IFn>) {
+        self.route(Method::PUT, path, f);
+    }
+
+    pub fn delete(&mut self, path: String, f: Box<IFn>) {
+        self.route(Method::DELETE, path, f);
+    }
+
+    pub fn head(&mut self, path: String, f: Box<IFn>) {
+        self.route(Method::HEAD, path, f);
+    }
+
+    pub fn options(&mut self, path: String, f: Box<IFn>) {
+        self.route(Method::OPTIONS, path, f);
+    }
+
+    pub fn connect(&mut self, path: String, f: Box<IFn>) {
+        self.route(Method::CONNECT, path, f);
+    }
+
+    pub fn trace(&mut self, path: String, f: Box<IFn>) {
+        self.route(Method::TRACE, path, f);
+    }
+
+    pub fn patch(&mut self, path: String, f: Box<IFn>) {
+        self.route(Method::PATCH, path, f);
     }
 
     pub fn route(&mut self, method: Method, path: String, f: Box<IFn>) {

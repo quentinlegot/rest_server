@@ -3,32 +3,65 @@ use std::fmt::{Display, Formatter};
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub enum Method {
     GET,
-    POST
+    POST,
+    PUT,
+    DELETE,
+    HEAD,
+    OPTIONS,
+    CONNECT,
+    TRACE,
+    PATCH
 }
 
 impl Method {
+
     pub fn as_str(&self) -> &'static str {
         match self {
             Method::GET => "GET",
-            Method::POST => "POST"
+            Method::POST => "POST",
+            Method::PUT => "PUT",
+            Method::DELETE => "DELETE",
+            Method::HEAD => "HEAD",
+            Method::OPTIONS => "OPTIONS",
+            Method::CONNECT => "CONNECT",
+            Method::TRACE => "TRACE",
+            Method::PATCH => "PATCH"
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Method> {
+        match s {
+            "GET" => Some(Method::GET),
+            "POST" => Some(Method::POST),
+            "PUT" => Some(Method::PUT),
+            "DELETE" => Some(Method::DELETE),
+            "HEAD" => Some(Method::HEAD),
+            "OPTIONS" => Some(Method::OPTIONS),
+            "CONNECT" => Some(Method::CONNECT),
+            "TRACE" => Some(Method::TRACE),
+            "PATCH" => Some(Method::PATCH),
+            _ => None
         }
     }
 
     pub fn parse_method(content: Option<&&str>) -> Result<(Method, String), &'static str> {
         match content {
             Some(s) => {
-                let el: Vec<&str> = s.split(" ").collect();
+                let el = s.split(" ").collect::<Vec<&str>>();
                 if let Some(s) = el.get(0) {
-                    match s {
-                        &"GET" => { Ok((Method::GET, Self::parse_path(el.get(1)))) },
-                        &"POST" => { Ok((Method::GET, Self::parse_path(el.get(1)))) },
-                        _ => { Err("Can't parse method") }
+                    match Self::from_str(s) {
+                        Some(method) => {
+                            Ok((method, Self::parse_path(el.get(1))))
+                        },
+                        None => {
+                            Err("Can't parse method: Invalid method")
+                        }
                     }
                 } else {
-                    Err("Can't parse method")
+                    Err("Can't parse method: no method")
                 }
             },
-            None => Err("Can't parse method")
+            None => Err("Can't parse method: no content")
         }
     }
 
