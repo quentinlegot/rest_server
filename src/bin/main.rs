@@ -1,5 +1,5 @@
 use rest_server::response::Response;
-use rest_server::response::Status;
+use rest_server::status::Status;
 use rest_server::request::Request;
 use rest_server::Server;
 use std::thread;
@@ -19,7 +19,7 @@ fn main() {
 fn index(request: Request, mut response: Response) {
     let content = "Hello";
     println!("{}", request.get_header("User-Agent").unwrap());
-    response.set_status(Status::from(200));
+    response.set_status(Status::from(418));
     response.set_header(String::from("Content-Type"), String::from("text/plain"));
     response.set_body(content);
     response.send();

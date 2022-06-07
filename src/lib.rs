@@ -2,16 +2,18 @@ mod threadpool;
 pub mod response;
 pub mod request;
 pub mod method;
+pub mod status;
 use threadpool::ThreadPool;
 use method::Method;
 use request::Request;
 use response::Response;
-use response::Status;
+use status::Status;
 use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream};
 use std::io::prelude::*;
 use std::str;
 use std::sync::{Arc, RwLock};
+use std::sync::atomic::AtomicBool;
 use ctrlc;
 
 #[macro_use]
@@ -42,10 +44,6 @@ pub struct Server {
 impl Server {
 
     pub fn new() -> Self {
-        ctrlc::set_handler(|| {
-            println!("Shutting down...");
-            std::process::exit(0);
-        }).expect("Error setting Ctrl-C handler");
         Self {
             number_of_workers: 4,
         }
@@ -96,15 +94,29 @@ impl Server {
         self.number_of_workers = number;
     }
 
-    pub fn listen(&self, port: u32) {
+    pub fn listen(&mut self, port: u32) {
         assert!(port > 0);
-        let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
+        let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).expect("Could not bind to port");
         let pool = ThreadPool::new(self.number_of_workers);
+        let exit = Arc::new(RwLock::new(AtomicBool::new(false)));
+        let exit_clone = Arc::clone(&exit);
+
+        ctrlc::set_handler(move || {
+            // We run like this because we want destructors to run before leaving the program
+            println!("Shutting down... (shutdown down sequence will start when next request is received and after all workers are done)");
+            exit_clone.write().unwrap().store(true, std::sync::atomic::Ordering::SeqCst);
+        }).expect("Error setting Ctrl-C handler");
+
         for stream in listener.incoming() {
             let stream = stream.unwrap();
             let ifn = self.handle_connection(stream.try_clone().unwrap());
             match ifn {
                 Ok((request, response)) => {
+                    let clone = Arc::clone(&exit);
+                    if clone.read().unwrap().load(std::sync::atomic::Ordering::SeqCst) {
+                        break;
+                    }
+                    drop(clone);
                     let routing_clone = Arc::clone(&ROUTING);
                     pool.execute(move || {
                         let r = routing_clone.read().unwrap();
@@ -113,7 +125,11 @@ impl Server {
                         route(request, response)
                     })
                 },
-                Err(e) => println!("{}", e),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    drop(pool);
+                    break;
+                },
             }
 
         }

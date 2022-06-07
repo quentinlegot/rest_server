@@ -1,6 +1,7 @@
 use std::net::TcpStream;
 use std::io::Write;
 use std::collections::HashMap;
+use crate::status::Status;
 
 pub struct Response {
     pub status: Status,
@@ -48,30 +49,5 @@ impl Response {
         response.push_str(&self.body);
         self.stream.write(response.as_bytes()).unwrap();
         self.stream.flush().unwrap();
-    }
-}
-
-#[repr(u16)]
-pub enum Status {
-    Ok = 200,
-    NotFound = 404,
-}
-
-impl Status {
-    fn as_str(&self) -> &'static str {
-        match self {
-            Status::Ok => "200 OK",
-            Status::NotFound => "404 Not Found",
-        }
-    }
-}
-
-impl From::<u16> for Status {
-    fn from(status: u16) -> Self {
-        match status {
-            200 => Status::Ok,
-            404 => Status::NotFound,
-            _ => panic!("Unknown status code"),
-        }
     }
 }
