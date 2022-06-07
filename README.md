@@ -8,11 +8,10 @@ This program is still in development
 
 Feature to add:
 
-- [ ] Parsing request header
-- [ ] Send response header
-- [ ] Only available status code are 200 and 404 but more will be available
+- [ ] https://github.com/quentinlegot/rest_server/issues/1
+- [ ] https://github.com/quentinlegot/rest_server/issues/2
 - [ ] Don't support authentification natively (won't add support shortly as you can made it yourself when `parsing request header` will be done)
-- [ ] Only support GET and POST
+- [ ] https://github.com/quentinlegot/rest_server/issues/3
 
 I'm only support http/1.1 and won't support 2.0
 
