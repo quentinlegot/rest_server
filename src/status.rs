@@ -1,8 +1,9 @@
 
 /// Enum representing the status of a HTTP response.
 /// The status code is a 3-digit number.
-/// See [RFC 7231](https://tools.ietf.org/html/rfc7231) and [RFC 6585](https://tools.ietf.org/html/rfc6585) for more information,
-/// A simplified version is also available [here](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
+/// 
+/// See [RFC 7231](https://tools.ietf.org/html/rfc7231) and [RFC 6585](https://tools.ietf.org/html/rfc6585) for more information.
+/// A simplified version is also available [here](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
 /// About the TeaPot error please see [MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/418) or [RFC 2324](https://tools.ietf.org/html/rfc2324)
 #[repr(u16)]
 pub enum Status {
@@ -141,7 +142,8 @@ impl Status {
 
 impl From::<u16> for Status {
 
-    /// Convert a u16 status code to a Status enum value
+    /// Convert a u16 status code to a Status enum value.
+    /// 
     /// Panic if the status code is not valid
     fn from(status: u16) -> Self {
         match status {

@@ -4,14 +4,23 @@ use std::fmt::{Display, Formatter};
 /// It is used to determine the type of request send to the server.
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub enum Method {
+    /// GET method, used to request a resource.
     GET,
+    /// POST method, used to send data to server.
     POST,
+    /// PUT method, used to update or create a resource.
     PUT,
+    /// DELETE method, used to delete a resource.
     DELETE,
+    /// HEAD method, used to request a resource without body.
     HEAD,
+    /// OPTIONS method, used to describe the communication options for the target resource.
     OPTIONS,
+    /// CONNECT method, used to create a tunnel to the server.
     CONNECT,
+    /// TRACE method, used to perform a message loop-back test along the path to the target resource.
     TRACE,
+    /// PATCH method, used to apply partial modifications to a resource.
     PATCH
 }
 
@@ -50,6 +59,7 @@ impl Method {
     }
 
     /// Parse the content of the request and return a Request object containing the method and the path.
+    /// 
     /// If the request is not a valid request, return Err (maybe in the future we will return a 400 error cause this seem to be a better handling).
     pub fn parse_method(content: Option<&&str>) -> Result<(Method, String), &'static str> {
         match content {

@@ -1,3 +1,30 @@
+/*!
+ 
+A Minimalist multi-threaded REST server framework written in Rust.
+ 
+Create a server with a given port and a given routes.
+  
+# Example
+
+ ```rust
+fn main() {
+    let mut app = Server::new();
+    app.set_number_of_worker(8);
+    app.get(String::from("/"), Box::new(index));
+    app.listen(7878);
+}
+
+fn index(request: Request, mut response: Response) {
+    let content = "Hello";
+    println!("{}", request.get_header("User-Agent").unwrap());
+    response.set_status(Status::from(418));
+    response.set_header(String::from("Content-Type"), String::from("text/plain"));
+    response.set_body(content);
+    response.send();
+}
+```
+
+ */
 mod threadpool;
 pub mod response;
 pub mod request;
@@ -24,6 +51,7 @@ type IFn = dyn Fn(Request, Response) + Send + 'static + Sync;
 lazy_static! {
     /// Store all the registered routes.
     /// The key is the combinaison of the method and the path, the value is the function to call.
+    /// 
     /// The usage of a RwLock(Read, write lock) is to avoid thead-safety issues, read is non blocking, write is blocking.
     /// write lock is used to add a new route, read lock is used to get the function to call.
     static ref ROUTING: Arc<RwLock<HashMap<(Method, String), Box<IFn>>>> = {
@@ -42,16 +70,16 @@ fn not_found(_req: Request, mut res: Response) {
 }
 
 /// Main struct, start the server and listen on the port given in argument.
+/// 
 /// number_of_workers is the number of threads used to handle the requests.
 /// My advice is to set number_of_workers to the number of logical cores of your CPU.
-/// If you don't know how to get the number of logical cores, you can use the following command:
 pub struct Server {
     number_of_workers: usize,
 }
 
 impl Server {
     
-    /// Create a new Server
+    /// Create a new Server.
     /// Socket isn't opened yet, you have to call listen() to open it.
     pub fn new() -> Self {
         Self {
@@ -110,8 +138,10 @@ impl Server {
     }
 
     /// Set the number of workers used to handle the requests.
-    /// See the documentation of the ThreadPool struct for more information.
     /// The default value is 4.
+    /// 
+    /// See the documentation of the ThreadPool struct for more information.
+    /// 
     /// If you set the number of workers to 0, the program will panic.
     pub fn set_number_of_worker(&mut self, number: usize) {
         assert!(number > 0);
@@ -120,8 +150,10 @@ impl Server {
 
     /// Open the socket and listen on the given port.
     /// The socket is opened in blocking mode to use least CPU usage possible.
+    /// 
     /// Because of that, if you use ctrl+c, the program will not stop immediately, but will wait for the current requests and the next ones to finish.
     /// After, the socket is closed, destructor will be called and the program will stop.
+    /// 
     /// port is the port on which the server will listen, if port isn't positive, the program will panic.
     pub fn listen(&mut self, port: u32) {
         assert!(port > 0);

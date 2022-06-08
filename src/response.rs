@@ -26,13 +26,15 @@ impl Response {
         }
     }
 
-    /// Add / Replace a header to the response
+    /// Add / Replace a header to the response.
+    /// 
     /// If the header already exists, it will be replaced, otherwise it will be added.
     pub fn set_header(&mut self, key: String, value: String) {
         self.headers.insert(key, value);
     }
 
-    /// Remove a header from the response
+    /// Remove a header from the response.
+    /// 
     /// If the header doesn't exist, nothing will happen.
     pub fn remove_header(&mut self, key: String) {
         self.headers.remove(&key);
@@ -44,13 +46,14 @@ impl Response {
     }
 
 
-    /// Set the body of the response
+    /// Set the body of the response.
     /// The body will be sent as a string.
     pub fn set_body(&mut self, body: &str) {
         self.body = body.to_string();
     }
 
-    /// Send a HTTP/1.1 response to the client
+    /// Send a HTTP/1.1 response to the client.
+    /// 
     /// The stream is closed after the response is sent, so this method should be called only once and at the end of your function.
     pub fn send(&mut self) {
         let status_line = format!("HTTP/1.1 {}\r\n", self.status.as_str());
