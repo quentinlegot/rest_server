@@ -2,6 +2,8 @@ use std::vec::Vec;
 use std::thread;
 use std::sync::{mpsc, Arc, Mutex};
 
+/// ThreadPool struct to manage multiple tasks in parallel.
+/// Totally inspired by the threadpool example from the official rust tutorial / book, see [here](https://doc.rust-lang.org/book/ch20-02-multithreaded.html), everything is explained in the book.
 pub struct ThreadPool {
     workers: Vec<Worker>,
     sender: mpsc::Sender<Message>
@@ -16,8 +18,8 @@ impl ThreadPool {
         let (sender, receiver) = mpsc::channel();
         let receiver = Arc::new(Mutex::new(receiver));
         let mut workers = Vec::with_capacity(size);
-        for id in 0..size {
-            workers.push(Worker::new(id, Arc::clone(&receiver)));
+        for _ in 0..size {
+            workers.push(Worker::new(Arc::clone(&receiver)));
         }
         Self {
             workers,
@@ -41,7 +43,6 @@ impl Drop for ThreadPool {
         }
         println!("Shutting down all workers");
         for worker in &mut self.workers {
-            println!("Shutting down worker {}", worker.id);
             if let Some(thread) = worker.thread.take() {
                 thread.join().unwrap();
             }
@@ -50,12 +51,11 @@ impl Drop for ThreadPool {
 }
 
 struct Worker {
-    id: usize,
     thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Self {
+    fn new(receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Self {
         let thread = thread::spawn(move || loop {
             let message = receiver.lock().unwrap().recv().unwrap();
             match message {
@@ -64,14 +64,12 @@ impl Worker {
                     job();
                 }
                 Message::Terminate => {
-                    println!("Worker {} was told to terminate", id);
                     break;
                 }
             }
         });
 
         Self {
-            id,
             thread: Some(thread)
         }
     }

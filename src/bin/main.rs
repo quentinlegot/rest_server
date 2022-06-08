@@ -6,7 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 fn main() {
-    let mut app: Server = Server::new();
+    let mut app = Server::new();
     app.set_number_of_worker(8);
     app.get(String::from("/"), Box::new(index));
     app.post(String::from("/"), Box::new(index_post));

@@ -22,6 +22,10 @@ extern crate lazy_static;
 type IFn = dyn Fn(Request, Response) + Send + 'static + Sync;
 
 lazy_static! {
+    /// Store all the registered routes.
+    /// The key is the combinaison of the method and the path, the value is the function to call.
+    /// The usage of a RwLock(Read, write lock) is to avoid thead-safety issues, read is non blocking, write is blocking.
+    /// write lock is used to add a new route, read lock is used to get the function to call.
     static ref ROUTING: Arc<RwLock<HashMap<(Method, String), Box<IFn>>>> = {
         let arc: Arc<RwLock<HashMap<(Method, String), Box<IFn>>>> = Arc::new(RwLock::new(HashMap::new()));
         arc.write().unwrap().insert((Method::GET, String::from("/404.html")), Box::new(not_found));
@@ -29,7 +33,7 @@ lazy_static! {
     };
 }
 
-
+/// Default route if no route is found or if client call /404.html
 fn not_found(_req: Request, mut res: Response) {
     res.set_status(Status::NotFound);
     res.set_header(String::from("Content-Type"), String::from("text/plain; charset=utf-8"));
@@ -37,63 +41,88 @@ fn not_found(_req: Request, mut res: Response) {
     res.send();
 }
 
+/// Main struct, start the server and listen on the port given in argument.
+/// number_of_workers is the number of threads used to handle the requests.
+/// My advice is to set number_of_workers to the number of logical cores of your CPU.
+/// If you don't know how to get the number of logical cores, you can use the following command:
 pub struct Server {
     number_of_workers: usize,
 }
 
 impl Server {
-
+    
+    /// Create a new Server
+    /// Socket isn't opened yet, you have to call listen() to open it.
     pub fn new() -> Self {
         Self {
             number_of_workers: 4,
         }
     }
 
+    /// add a new GET route to the server with the given path and the given function
     pub fn get(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::GET, path, f);
     }
 
+    /// add a new POST route to the server with the given path and the given function
     pub fn post(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::POST, path, f);
     }
 
+    /// add a new PUT route to the server with the given path and the given function
     pub fn put(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::PUT, path, f);
     }
 
+    /// add a new DELETE route to the server with the given path and the given function 
     pub fn delete(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::DELETE, path, f);
     }
 
+    /// add a new HEAD route to the server with the given path and the given function
     pub fn head(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::HEAD, path, f);
     }
 
+    /// add a new OPTIONS route to the server with the given path and the given function
     pub fn options(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::OPTIONS, path, f);
     }
 
+    /// add a new CONNECT route to the server with the given path and the given function
     pub fn connect(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::CONNECT, path, f);
     }
 
+    /// add a new TRACE route to the server with the given path and the given function
     pub fn trace(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::TRACE, path, f);
     }
 
+    /// add a new PATCH route to the server with the given path and the given function
     pub fn patch(&mut self, path: String, f: Box<IFn>) {
         self.route(Method::PATCH, path, f);
     }
 
+    /// add a new route to the server with the given method, the given path and the given function
     pub fn route(&mut self, method: Method, path: String, f: Box<IFn>) {
         ROUTING.write().unwrap().insert((method, path), f);
     }
 
+    /// Set the number of workers used to handle the requests.
+    /// See the documentation of the ThreadPool struct for more information.
+    /// The default value is 4.
+    /// If you set the number of workers to 0, the program will panic.
     pub fn set_number_of_worker(&mut self, number: usize) {
         assert!(number > 0);
         self.number_of_workers = number;
     }
 
+    /// Open the socket and listen on the given port.
+    /// The socket is opened in blocking mode to use least CPU usage possible.
+    /// Because of that, if you use ctrl+c, the program will not stop immediately, but will wait for the current requests and the next ones to finish.
+    /// After, the socket is closed, destructor will be called and the program will stop.
+    /// port is the port on which the server will listen, if port isn't positive, the program will panic.
     pub fn listen(&mut self, port: u32) {
         assert!(port > 0);
         let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).expect("Could not bind to port");
@@ -112,18 +141,18 @@ impl Server {
             let ifn = self.handle_connection(stream.try_clone().unwrap());
             match ifn {
                 Ok((request, response)) => {
-                    let clone = Arc::clone(&exit);
-                    if clone.read().unwrap().load(std::sync::atomic::Ordering::SeqCst) {
-                        break;
-                    }
-                    drop(clone);
                     let routing_clone = Arc::clone(&ROUTING);
                     pool.execute(move || {
                         let r = routing_clone.read().unwrap();
                         let route = r.get(&(request.method, request.path.clone())).unwrap();
                         println!("[REQUEST] {} {}", request.method, request.path);
                         route(request, response)
-                    })
+                    });
+                    let clone = Arc::clone(&exit);
+                    if clone.read().unwrap().load(std::sync::atomic::Ordering::SeqCst) {
+                        break;
+                    }
+                    drop(clone);
                 },
                 Err(e) => {
                     eprintln!("{}", e);
@@ -135,7 +164,9 @@ impl Server {
         }
     }
 
-
+    /// Handle a connection and return a tuple containing the request and the response usable to send a response to the client.
+    /// If a path is not found, the function will return a 404 not found response.
+    /// If the method is not supported, the function will return an Result::Err containing the error. (In the future, it will return a 405 method not allowed response)
     fn handle_connection(&self, mut stream: TcpStream) -> Result<(Request, Response), String> {
         let buffer = &mut [0; 1024];
         stream.read(buffer).unwrap();
@@ -162,10 +193,13 @@ impl Server {
         }
     }
 
+    /// Construct a request from the given content and the given method and path.
     fn construct_request(&self, content: String, method: Method, path: String) -> Request {
         request::Request::new(method, path, content)
     }
 
+    /// Construct a response from the given stream.
+    /// The stream is used to send the response to the client and is closed when the response is sent.
     fn construct_response(&self, stream: TcpStream) -> Response {
         response::Response::new(stream)
     }

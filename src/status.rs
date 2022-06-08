@@ -1,3 +1,9 @@
+
+/// Enum representing the status of a HTTP response.
+/// The status code is a 3-digit number.
+/// See [RFC 7231](https://tools.ietf.org/html/rfc7231) and [RFC 6585](https://tools.ietf.org/html/rfc6585) for more information,
+/// A simplified version is also available [here](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
+/// About the TeaPot error please see [MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/418) or [RFC 2324](https://tools.ietf.org/html/rfc2324)
 #[repr(u16)]
 pub enum Status {
     Continue = 100,
@@ -63,7 +69,9 @@ pub enum Status {
     NetworkAuthenticationRequired = 511,
 }
 
+
 impl Status {
+    /// Return the status code as a string (e.g. "200 OK")
     pub fn as_str(&self) -> &'static str {
         match self {
             Status::Continue => "100 Continue",
@@ -132,6 +140,9 @@ impl Status {
 }
 
 impl From::<u16> for Status {
+
+    /// Convert a u16 status code to a Status enum value
+    /// Panic if the status code is not valid
     fn from(status: u16) -> Self {
         match status {
             100 => Status::Continue,
@@ -195,7 +206,7 @@ impl From::<u16> for Status {
             508 => Status::LoopDetected,
             510 => Status::NotExtended,
             511 => Status::NetworkAuthenticationRequired,
-            _ => panic!("Unknown status code: {}", status),
+            _ => panic!("Unknown status code: {}", status), // The status code is not valid, as this is a server error, the program panics
         }
     }
 }
