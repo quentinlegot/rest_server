@@ -151,9 +151,14 @@ impl Server {
         let exit_clone = Arc::clone(&exit);
 
         ctrlc::set_handler(move || {
-            // We run like this because we want destructors to run before leaving the program
-            println!("Shutting down... (shutdown down sequence will start when next request is received and after all workers are done)");
-            exit_clone.write().unwrap().store(true, std::sync::atomic::Ordering::SeqCst);
+            // We run like this because we want all already running request to finish and destructors to run before leaving the program
+            if exit_clone.read().unwrap().load(std::sync::atomic::Ordering::SeqCst) {
+                println!("Shutdown sequence already started, forcing exit (not recommended)");
+                std::process::exit(0);
+            } else {
+                println!("Shutting down... (shutdown down sequence will start when next request is received and after all workers are done)");
+                exit_clone.write().unwrap().store(true, std::sync::atomic::Ordering::SeqCst);
+            }
         }).expect("Error setting Ctrl-C handler");
 
         for stream in listener.incoming() {

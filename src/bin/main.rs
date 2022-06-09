@@ -4,12 +4,15 @@ use rest_server::request::Request;
 use rest_server::Server;
 use std::thread;
 use std::time::Duration;
+use std::fs;
 
 fn main() {
     let mut app = Server::new();
     app.set_number_of_worker(8);
     app.get(String::from("/"), Box::new(index));
     app.post(String::from("/"), Box::new(index_post));
+    app.get(String::from("/form"), Box::new(form));
+    app.post(String::from("/form"), Box::new(form));
     app.patch(String::from("/"), Box::new(index_patch));
     app.get(String::from("/sleep"), Box::new(sleep));
     app.delete(String::from("/sleep"), Box::new(sleep_delete));
@@ -56,5 +59,13 @@ fn sleep_delete(_request: Request, mut response: Response){
     let content = "Sleep delete";
     response.set_status(Status::from(200));
     response.set_body(content);
+    response.send();
+}
+
+fn form(_request: Request, mut response: Response) {
+    let content = fs::read_to_string("resources/form.html").unwrap();
+    response.set_status(Status::Ok);
+    response.set_header(String::from("Content-Type"), String::from("text/html"));
+    response.set_body(content.as_str());
     response.send();
 }
