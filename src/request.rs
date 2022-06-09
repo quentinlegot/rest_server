@@ -70,6 +70,10 @@ impl RequestPath {
             query: HashMap::with_capacity(0),
         }
     }
+    
+    pub fn get_query(&self, key: &str) -> Option<&String> {
+        self.query.get(key)
+    }
 
     pub fn get_path(&self) -> String {
         self.path.join("/")
@@ -96,6 +100,6 @@ impl Eq for RequestPath {}
 
 impl Display for RequestPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}, params: {:?}", self.get_path(), self.query)
+        write!(f, "/{}, params: {:?}", self.get_path(), self.query)
     }
 }
