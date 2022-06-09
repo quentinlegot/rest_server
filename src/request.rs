@@ -1,11 +1,13 @@
 use crate::Method;
 use std::collections::HashMap;
+use core::fmt::Display;
+use std::hash::{Hash, Hasher};
 
 /// Request struct, used to represent a HTTP request send to the server.
 #[derive(Debug)]
 pub struct Request {
     pub method: Method,
-    pub path: String,
+    pub path: RequestPath,
     pub headers: HashMap<String, String>,
     pub body: String,
 }
@@ -14,7 +16,7 @@ impl Request {
 
     /// Create a new Request struct.
     /// Headers are parsed in parse_headers() (private method) method before return the Request object.
-    pub fn new(method: Method, path: String, body: String) -> Self {
+    pub fn new(method: Method, path: RequestPath, body: String) -> Self {
         let headers = Self::parse_header(body.as_str());
         Self {
             method,
@@ -41,5 +43,59 @@ impl Request {
             }
         };
         headers
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RequestPath {
+    path: Vec<String>,
+    query: HashMap<String, String>,
+}
+
+impl RequestPath {
+    pub fn new(path: String) -> Self {
+        let url = path.split_once("?").unwrap_or((path.as_str(), ""));
+        let path = url.0.split("/").filter(|s| !s.is_empty()).map(|s| String::from(s)).collect::<Vec<String>>();
+        let query = url.1.split("&").filter(|s| !s.is_empty()).map(|s| s.split("=").collect::<Vec<&str>>()).map(|v| (String::from(v[0]), String::from(v[1]))).collect::<HashMap<String, String>>();
+        RequestPath {
+            path,
+            query
+        }
+    }
+
+    pub fn new_route(path: String) -> Self {
+        let path = path.split("/").filter(|s| !s.is_empty()).map(|s| String::from(s)).collect::<Vec<String>>();
+        RequestPath {
+            path,
+            query: HashMap::with_capacity(0),
+        }
+    }
+
+    pub fn get_path(&self) -> String {
+        self.path.join("/")
+    }
+
+    pub fn get_path_position(&self, position: usize) -> Option<String> {
+        self.path.get(position).map(|s| s.clone())
+    }
+}
+
+impl Hash for RequestPath {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.path.hash(state);
+    }
+}
+
+impl PartialEq for RequestPath {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path
+    }
+}
+
+impl Eq for RequestPath {}
+
+impl Display for RequestPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}, params: {:?}", self.get_path(), self.query)
     }
 }

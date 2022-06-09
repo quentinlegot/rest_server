@@ -32,7 +32,7 @@ pub mod method;
 pub mod status;
 use threadpool::ThreadPool;
 use method::Method;
-use request::Request;
+use request::{Request, RequestPath};
 use response::Response;
 use status::Status;
 use std::collections::HashMap;
@@ -54,9 +54,9 @@ lazy_static! {
     /// 
     /// The usage of a RwLock(Read, write lock) is to avoid thead-safety issues, read is non blocking, write is blocking.
     /// write lock is used to add a new route, read lock is used to get the function to call.
-    static ref ROUTING: Arc<RwLock<HashMap<(Method, String), Box<IFn>>>> = {
-        let arc: Arc<RwLock<HashMap<(Method, String), Box<IFn>>>> = Arc::new(RwLock::new(HashMap::new()));
-        arc.write().unwrap().insert((Method::GET, String::from("/404.html")), Box::new(not_found));
+    static ref ROUTING: Arc<RwLock<HashMap<(Method, RequestPath), Box<IFn>>>> = {
+        let arc: Arc<RwLock<HashMap<(Method, RequestPath), Box<IFn>>>> = Arc::new(RwLock::new(HashMap::new()));
+        arc.write().unwrap().insert((Method::GET, RequestPath::new(String::from("/404.html"))), Box::new(not_found));
         arc
     };
 }
@@ -134,7 +134,7 @@ impl Server {
 
     /// add a new route to the server with the given method, the given path and the given function
     pub fn route(&mut self, method: Method, path: String, f: Box<IFn>) {
-        ROUTING.write().unwrap().insert((method, path), f);
+        ROUTING.write().unwrap().insert((method, RequestPath::new_route(path)), f);
     }
 
     /// Set the number of workers used to handle the requests.
@@ -176,20 +176,19 @@ impl Server {
                     let routing_clone = Arc::clone(&ROUTING);
                     pool.execute(move || {
                         let r = routing_clone.read().unwrap();
-                        let route = r.get(&(request.method, request.path.clone())).unwrap();
                         println!("[REQUEST] {} {}", request.method, request.path);
+                        let route = r.get(&(request.method, request.path.clone())).unwrap();
                         route(request, response)
                     });
                     let clone = Arc::clone(&exit);
                     if clone.read().unwrap().load(std::sync::atomic::Ordering::SeqCst) {
+                        drop(pool);
                         break;
                     }
                     drop(clone);
                 },
                 Err(e) => {
                     eprintln!("{}", e);
-                    drop(pool);
-                    break;
                 },
             }
 
@@ -216,7 +215,7 @@ impl Server {
                     Ok((request, response))
                 },
                 false => {
-                    Ok((Request::new(Method::GET, String::from("/404.html"), String::new()), Response::new(stream.try_clone().unwrap())))
+                    Ok((Request::new(Method::GET, RequestPath::new_route(String::from("/404.html")), String::new()), Response::new(stream.try_clone().unwrap())))
                     //Err(format!("No handler found for {} {}", method.0, method.1))
                 },
             }
@@ -226,7 +225,7 @@ impl Server {
     }
 
     /// Construct a request from the given content and the given method and path.
-    fn construct_request(&self, content: String, method: Method, path: String) -> Request {
+    fn construct_request(&self, content: String, method: Method, path: RequestPath) -> Request {
         request::Request::new(method, path, content)
     }
 

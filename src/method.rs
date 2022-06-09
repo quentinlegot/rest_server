@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use crate::request::RequestPath;
 
 /// Method is a enum that represents the HTTP method.
 /// It is used to determine the type of request send to the server.
@@ -61,7 +62,7 @@ impl Method {
     /// Parse the content of the request and return a Request object containing the method and the path.
     /// 
     /// If the request is not a valid request, return Err (maybe in the future we will return a 400 error cause this seem to be a better handling).
-    pub fn parse_method(content: Option<&&str>) -> Result<(Method, String), &'static str> {
+    pub fn parse_method(content: Option<&&str>) -> Result<(Method, RequestPath), String> {
         match content {
             Some(s) => {
                 let el = s.split(" ").collect::<Vec<&str>>();
@@ -71,24 +72,24 @@ impl Method {
                             Ok((method, Self::parse_path(el.get(1))))
                         },
                         None => {
-                            Err("Can't parse method: Invalid method")
+                            Err(format!("Can't parse method: Invalid method: {:?}", el))
                         }
                     }
                 } else {
-                    Err("Can't parse method: no method")
+                    Err(String::from("Can't parse method: no method"))
                 }
             },
-            None => Err("Can't parse method: no content")
+            None => Err(String::from("Can't parse method: no content"))
         }
     }
 
     /// Parse the path of the request and return a String containing the path.
     /// If the path isn't given in the request, return "/404.html".
-    pub fn parse_path(path: Option<&&str>) -> String {
+    pub fn parse_path(path: Option<&&str>) -> RequestPath {
         if let Some(s) = path {
-            return String::from(*s);
+            RequestPath::new(String::from(*s))
         } else {
-            return String::from("/404.html");
+            RequestPath::new(String::from("/404.html"))
         }
     }
 }
