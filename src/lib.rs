@@ -43,23 +43,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::AtomicBool;
 use ctrlc;
 
-#[macro_use]
-extern crate lazy_static;
-
 type IFn = dyn Fn(Request, Response) + Send + 'static + Sync;
-
-lazy_static! {
-    /// Store all the registered routes.
-    /// The key is the combinaison of the method and the path, the value is the function to call.
-    /// 
-    /// The usage of a RwLock(Read, write lock) is to avoid thead-safety issues, read is non blocking, write is blocking.
-    /// write lock is used to add a new route, read lock is used to get the function to call.
-    static ref ROUTING: Arc<RwLock<HashMap<(Method, RequestPath), Box<IFn>>>> = {
-        let arc: Arc<RwLock<HashMap<(Method, RequestPath), Box<IFn>>>> = Arc::new(RwLock::new(HashMap::new()));
-        arc.write().unwrap().insert((Method::GET, RequestPath::new(String::from("/404.html"))), Box::new(not_found));
-        arc
-    };
-}
 
 /// Default route if no route is found or if client call /404.html
 fn not_found(_req: Request, mut res: Response) {
@@ -75,6 +59,7 @@ fn not_found(_req: Request, mut res: Response) {
 /// My advice is to set number_of_workers to the number of logical cores of your CPU.
 pub struct Server {
     number_of_workers: usize,
+    routing: Arc<RwLock<HashMap<(Method, RequestPath), Box<IFn>>>>,
 }
 
 impl Server {
@@ -82,8 +67,11 @@ impl Server {
     /// Create a new Server.
     /// Socket isn't opened yet, you have to call listen() to open it.
     pub fn new() -> Self {
+        let arc: Arc<RwLock<HashMap<(Method, RequestPath), Box<IFn>>>> = Arc::new(RwLock::new(HashMap::new()));
+        arc.write().unwrap().insert((Method::GET, RequestPath::new(String::from("/404.html"))), Box::new(not_found));
         Self {
             number_of_workers: 4,
+            routing: arc,
         }
     }
 
@@ -134,7 +122,7 @@ impl Server {
 
     /// add a new route to the server with the given method, the given path and the given function
     pub fn route(&mut self, method: Method, path: String, f: Box<IFn>) {
-        ROUTING.write().unwrap().insert((method, RequestPath::new_route(path)), f);
+        self.routing.write().unwrap().insert((method, RequestPath::new_route(path)), f);
     }
 
     /// Set the number of workers used to handle the requests.
@@ -173,7 +161,7 @@ impl Server {
             let ifn = self.handle_connection(stream.try_clone().unwrap());
             match ifn {
                 Ok((request, response)) => {
-                    let routing_clone = Arc::clone(&ROUTING);
+                    let routing_clone = Arc::clone(&self.routing);
                     pool.execute(move || {
                         let r = routing_clone.read().unwrap();
                         println!("[REQUEST] {} {}", request.method, request.path);
@@ -208,7 +196,7 @@ impl Server {
         let content = String::from(s);
         let s = content.split("\r\n").collect::<Vec<&str>>();
         return if let Ok(method) = Method::parse_method(s.get(0)) {
-            return match ROUTING.read().unwrap().contains_key(&method) {
+            return match self.routing.read().unwrap().contains_key(&method) {
                 true => {
                     let request = self.construct_request(content, method.0, method.1);
                     let response = self.construct_response(stream.try_clone().unwrap());
